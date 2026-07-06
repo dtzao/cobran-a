@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM WhatsApp - Cobrança</title>
+    <style>
+        :root { --bg: #0f0f0f; --card: #1e1e1e; --text: #e0e0e0; --green: #25D366; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 10px; 
+        }
+        h1 { text-align:center; margin:15px 0; color:var(--green); }
+        .dashboard { display:flex; justify-content:space-around; background:var(--card); padding:15px; border-radius:12px; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+        .stat { text-align:center; cursor:pointer; padding:8px; border-radius:8px; }
+        .stat:hover { background:#333; }
+        .stat-value { font-size:1.8em; font-weight:bold; }
+        .filters { display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap; justify-content:center; }
+        .filter-btn { padding:10px 18px; background:#2a2a2a; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+        .filter-btn.active { background:var(--green); color:black; }
+        .controls { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; justify-content:center; }
+        input { padding:12px 15px; border-radius:8px; background:#2a2a2a; color:white; min-width:220px; }
+        button { padding:12px 15px; border-radius:8px; background:var(--green); color:white; cursor:pointer; font-weight:bold; }
+        .cliente { background:var(--card); padding:15px; border-radius:12px; margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:center; }
+        @media (max-width:768px) { .cliente { grid-template-columns:1fr; } }
+        .telefone-input { padding:10px; background:#2a2a2a; color:white; border:1px solid #444; border-radius:6px; width:100%; }
+        .btn-whatsapp { background:#25D366; padding:12px 20px; font-size:18px; }
+        .verde { border-left:5px solid #4ade80; }
+        .amarelo { border-left:5px solid #fbbf24; }
+        .vermelho { border-left:5px solid #ef4444; }
+        .nome-vencido { color: #ef4444 !important; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>📋 CENTRAL WHATSAPP - COBRANÇA</h1>
+    
+    <div class="dashboard">
+        <div class="stat" onclick="setFiltro('todos')"><div class="stat-value" id="total">0</div><div>Todos</div></div>
+        <div class="stat" onclick="setFiltro('pendentes')"><div class="stat-value" id="pendentes" style="color:#fbbf24;">0</div><div>Pendentes</div></div>
+        <div class="stat" onclick="setFiltro('enviados')"><div class="stat-value" id="enviados" style="color:#4ade80;">0</div><div>Enviados</div></div>
+        <div class="stat" onclick="setFiltro('vencidos')"><div class="stat-value" id="vencidos" style="color:#ef4444;">0</div><div>Vencidos</div></div>
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active" id="btn-todos" onclick="setFiltro('todos')">Todos</button>
+        <button class="filter-btn" id="btn-pendentes" onclick="setFiltro('pendentes')">Pendentes</button>
+        <button class="filter-btn" id="btn-enviados" onclick="setFiltro('enviados')">Enviados</button>
+        <button class="filter-btn" id="btn-vencidos" onclick="setFiltro('vencidos')">Vencidos</button>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="busca" placeholder="🔎 Buscar nome..." onkeyup="filtrar()">
+        <button onclick="proximoPendente()">➡️ PRÓXIMO PENDENTE</button>
+    </div>
+
+    <div id="lista"></div>
+
+    <script>
+        let dados = [
+            {nome: "negaa12", dataTxt: "13/07/2026"},
+            {nome: "D12d12", dataTxt: "19/07/2026"},
+            {nome: "Gilson77", dataTxt: "25/07/2026"},
+            {nome: "Galega1", dataTxt: "18/07/2026"},
+            {nome: "Keilad2", dataTxt: "29/07/2026"},
+            {nome: "Nicole12", dataTxt: "29/01/2027"},
+            {nome: "Jocadtv", dataTxt: "06/08/2026"},
+            {nome: "Gordao35", dataTxt: "28/07/2026"},
+            {nome: "Cavalcantii0415", dataTxt: "12/07/2026"},
+            {nome: "Rodrigo3116", dataTxt: "28/07/2026"},
+            {nome: "Sofia35", dataTxt: "13/07/2026"},
+            {nome: "Thiago6925", dataTxt: "13/07/2026"},
+            {nome: "Felippe22", dataTxt: "12/07/2026"},
+            {nome: "Lidiane84", dataTxt: "23/07/2026"},
+            {nome: "luc150", dataTxt: "01/06/2026"},
+            {nome: "Gutem78", dataTxt: "18/07/2026"},
+            {nome: "Duda85", dataTxt: "16/07/2026"},
+            {nome: "Fabio47", dataTxt: "25/07/2026"},
+            {nome: "Dani97", dataTxt: "15/07/2026"},
+            {nome: "Wilson26", dataTxt: "23/07/2026"},
+            {nome: "Tia Keila", dataTxt: "20/07/2026"},
+            {nome: "Marquesdtv", dataTxt: "21/07/2026"},
+            {nome: "Augustodtv", dataTxt: "17/07/2026"},
+            {nome: "Paloma4024", dataTxt: "02/09/2026"},
+            {nome: "Cristiano10", dataTxt: "19/07/2026"},
+            {nome: "Olive1", dataTxt: "22/07/2026"},
+            {nome: "Erikadtv1", dataTxt: "19/07/2026"},
+            {nome: "Graziela1", dataTxt: "08/07/2026"},
+            {nome: "Terezinha61", dataTxt: "06/07/2026"},
+            {nome: "Michele10", dataTxt: "02/08/2026"},
+            {nome: "Lopesdtv", dataTxt: "15/07/2026"},
+            {nome: "Ferdtv11", dataTxt: "21/07/2026"},
+            {nome: "Rafadtv", dataTxt: "19/07/2026"},
+            {nome: "dtvsimo", dataTxt: "13/07/2026"},
+            {nome: "Teste156", dataTxt: "07/07/2026"},
+            {nome: "dtvadri", dataTxt: "06/08/2026"},
+            {nome: "Ygordtv", dataTxt: "08/07/2026"},
+            {nome: "Romeodtv", dataTxt: "10/07/2026"},
+            {nome: "beadtv", dataTxt: "12/07/2026"},
+            {nome: "Abreudtv", dataTxt: "10/07/2026"},
+            {nome: "Guilhermedtv", dataTxt: "10/07/2026"},
+            {nome: "drodtv", dataTxt: "14/07/2026"},
+            {nome: "Thalesdtv", dataTxt: "07/07/2026"},
+            {nome: "dtvnat", dataTxt: "26/07/2026"},
+            {nome: "Juciidtv", dataTxt: "20/07/2026"},
+            {nome: "Jacdtv", dataTxt: "19/07/2026"},
+            {nome: "Pinhdtv", dataTxt: "13/07/2026"},
+            {nome: "elimardtv", dataTxt: "04/08/2026"},
+            {nome: "mariadtv", dataTxt: "07/07/2026"},
+            {nome: "caiodtv", dataTxt: "21/07/2026"},
+            {nome: "dtvluiz", dataTxt: "06/08/2026"},
+            {nome: "joaordg", dataTxt: "08/07/2026"},
+            {nome: "dtvbizao", dataTxt: "06/07/2026"},
+            {nome: "dtvsoares", dataTxt: "02/08/2026"},
+            {nome: "dtvelid", dataTxt: "15/07/2026"},
+            {nome: "martaale", dataTxt: "21/07/2026"},
+            {nome: "doretodtv", dataTxt: "19/07/2026"},
+            {nome: "Kaiodtv", dataTxt: "13/07/2026"},
+            {nome: "furdtvmorim", dataTxt: "07/08/2026"},
+            {nome: "leidedtv", dataTxt: "18/07/2026"},
+            {nome: "hiadtv", dataTxt: "21/06/2026"},
+            {nome: "dtvpaulo", dataTxt: "25/07/2026"},
+            {nome: "queiros21", dataTxt: "27/07/2026"},
+            {nome: "alesdtv", dataTxt: "12/07/2026"},
+            {nome: "andredtv1", dataTxt: "10/07/2026"},
+            {nome: "neridtv", dataTxt: "28/07/2026"},
+            {nome: "reindtv", dataTxt: "19/09/2026"},
+            {nome: "janadtv", dataTxt: "20/07/2026"},
+            {nome: "edsondtv", dataTxt: "20/07/2026"},
+            {nome: "trajdtv", dataTxt: "24/07/2026"},
+            {nome: "leodtv", dataTxt: "13/07/2026"},
+            {nome: "joaodtv5", dataTxt: "06/07/2026"},
+            {nome: "fagdtv", dataTxt: "09/07/2026"},
+            {nome: "Edidtv", dataTxt: "14/07/2026"},
+            {nome: "testedtv", dataTxt: "03/08/2026"},
+            {nome: "Letdtv", dataTxt: "01/08/2026"},
+            {nome: "simdtvyas", dataTxt: "15/07/2026"},
+            {nome: "alecdtv", dataTxt: "03/08/2026"},
+            {nome: "Melodtv", dataTxt: "17/07/2026"},
+            {nome: "Wilton77", dataTxt: "29/07/2026"},
+            {nome: "agdtv1", dataTxt: "01/08/2026"},
+            {nome: "fabridtv", dataTxt: "01/08/2026"},
+            {nome: "montedtv", dataTxt: "05/07/2026"},
+            {nome: "hugodtv", dataTxt: "08/06/2026"},
+            {nome: "joselidtv", dataTxt: "17/06/2026"},
+            {nome: "linedtv", dataTxt: "06/07/2026"},
+            {nome: "cardtv", dataTxt: "05/08/2026"},
+            {nome: "canedtv", dataTxt: "05/08/2026"},
+            {nome: "knudtv", dataTxt: "05/08/2026"},
+            {nome: "viccdtv", dataTxt: "04/08/2026"},
+            {nome: "abrdtv", dataTxt: "10/07/2026"},
+            {nome: "regdtv", dataTxt: "10/07/2026"},
+            {nome: "annedtv", dataTxt: "09/07/2026"},
+            {nome: "coedtv", dataTxt: "14/06/2026"},
+            {nome: "mathdtv", dataTxt: "15/07/2026"},
+            {nome: "ricdtv", dataTxt: "15/07/2026"},
+            {nome: "herdtvfag", dataTxt: "29/07/2026"},
+            {nome: "fhmdtv", dataTxt: "31/07/2026"},
+            {nome: "natdtvnathy", dataTxt: "16/07/2026"},
+            {nome: "marciodtv", dataTxt: "19/07/2026"},
+            {nome: "morodtv", dataTxt: "22/07/2026"},
+            {nome: "patdtv", dataTxt: "02/08/2026"},
+            {nome: "robdtv", dataTxt: "14/07/2026"},
+            {nome: "fatimadtv", dataTxt: "01/08/2026"},
+            {nome: "rosdtv", dataTxt: "06/08/2026"},
+            {nome: "juldtvedna", dataTxt: "12/07/2026"},
+            {nome: "jhodtvgildtv", dataTxt: "07/08/2026"},
+            {nome: "meddtv", dataTxt: "11/07/2026"},
+            {nome: "claudtvtat", dataTxt: "13/07/2026"},
+            {nome: "teidtv1", dataTxt: "20/07/2026"},
+            {nome: "Macieldtv", dataTxt: "25/12/2026"},
+            {nome: "dtvjose", dataTxt: "27/07/2026"},
+            {nome: "azedtvgomes", dataTxt: "15/07/2026"},
+            {nome: "ksgdtvluc", dataTxt: "09/07/2026"},
+            {nome: "betdtvlob", dataTxt: "16/07/2026"},
+            {nome: "Michdtvbordtv", dataTxt: "23/07/2026"},
+            {nome: "jeedtv", dataTxt: "06/06/2026"},
+            {nome: "interdtv", dataTxt: "05/07/2026"},
+            {nome: "tobdtvguidtv", dataTxt: "16/07/2026"},
+            {nome: "tianodtv", dataTxt: "27/07/2026"},
+            {nome: "roddtv", dataTxt: "19/07/2026"},
+            {nome: "matadtvroddtv1", dataTxt: "19/06/2026"},
+            {nome: "guilhdtv", dataTxt: "19/09/2026"},
+            {nome: "toindtv", dataTxt: "25/07/2026"},
+            {nome: "altdtv", dataTxt: "07/07/2026"},
+            {nome: "pedtv1", dataTxt: "10/07/2026"},
+            {nome: "gustadtv", dataTxt: "05/07/2026"},
+            {nome: "marcdtv", dataTxt: "30/07/2026"},
+            {nome: "rodridtv", dataTxt: "23/07/2026"},
+            {nome: "tobidtv", dataTxt: "23/07/2026"},
+            {nome: "dtvmargal", dataTxt: "22/07/2026"},
+            {nome: "cesdtv", dataTxt: "24/07/2026"},
+            {nome: "dtv1010", dataTxt: "07/08/2026"},
+            {nome: "rdgodtv", dataTxt: "08/07/2026"},
+            {nome: "zuldtv", dataTxt: "13/07/2026"},
+            {nome: "zuldtv1", dataTxt: "07/08/2026"},
+            {nome: "dirdtv", dataTxt: "20/08/2026"},
+            {nome: "ciadtv", dataTxt: "16/07/2026"},
+            {nome: "tobidtv1", dataTxt: "20/07/2026"},
+            {nome: "Michdtv1", dataTxt: "10/07/2026"},
+            {nome: "poldtviri", dataTxt: "07/07/2026"},
+            {nome: "vandtv", dataTxt: "10/07/2026"},
+            {nome: "stracitv1", dataTxt: "08/07/2026"},
+            {nome: "coedtv1", dataTxt: "10/07/2026"},
+            {nome: "bradtvnat", dataTxt: "05/08/2026"},
+            {nome: "adtvegodtv", dataTxt: "31/07/2026"},
+            {nome: "nicedtvtar", dataTxt: "02/08/2026"},
+            {nome: "dtvass", dataTxt: "09/07/2026"},
+            {nome: "rendtv", dataTxt: "09/07/2026"},
+            {nome: "dtvrafatat", dataTxt: "08/07/2026"},
+            {nome: "danidtvalv", dataTxt: "07/08/2026"},
+            {nome: "pedidtv", dataTxt: "10/07/2026"},
+            {nome: "xcrdtv", dataTxt: "07/07/2026"},
+            {nome: "junidtv", dataTxt: "17/07/2026"},
+            {nome: "rbjdtv", dataTxt: "26/06/2026"},
+            {nome: "jordtvgab", dataTxt: "15/07/2026"},
+            {nome: "rdtvdpaulad", dataTxt: "14/07/2026"},
+            {nome: "paula1", dataTxt: "25/07/2026"},
+            {nome: "vindtv", dataTxt: "15/07/2026"},
+            {nome: "apadtvandredtv", dataTxt: "03/08/2026"},
+            {nome: "rosetvv", dataTxt: "04/08/2026"},
+            {nome: "dtvjgopfedtv", dataTxt: "01/08/2026"},
+            {nome: "pfedtv1", dataTxt: "17/08/2026"},
+            {nome: "gerdtvrpidtv", dataTxt: "17/08/2026"},
+            {nome: "neldtvdordtv", dataTxt: "19/07/2026"},
+            {nome: "stracitvjondtv", dataTxt: "22/07/2026"},
+            {nome: "appdtvbraz", dataTxt: "23/07/2026"},
+            {nome: "segutvlos", dataTxt: "21/07/2026"},
+            {nome: "fabiodtv", dataTxt: "06/06/2026"},
+            {nome: "klebdtvmor", dataTxt: "15/07/2026"},
+            {nome: "renatdtv", dataTxt: "05/06/2026"},
+            {nome: "renatodtv", dataTxt: "20/07/2026"},
+            {nome: "snedtv", dataTxt: "04/07/2026"},
+            {nome: "dtvmar1", dataTxt: "05/08/2026"},
+            {nome: "dredtvgabritv", dataTxt: "09/06/2026"},
+            {nome: "joaodtv1", dataTxt: "08/07/2026"},
+            {nome: "avedtvlac", dataTxt: "08/07/2026"},
+            {nome: "pacdtvgod", dataTxt: "08/07/2026"},
+            {nome: "dtvalex", dataTxt: "08/07/2026"},
+            {nome: "viccdt1santos", dataTxt: "30/07/2026"},
+            {nome: "danieldtv", dataTxt: "19/07/2026"},
+            {nome: "nandtveds", dataTxt: "24/07/2026"},
+            {nome: "yagdtv", dataTxt: "13/07/2026"},
+            {nome: "dtvrosecal", dataTxt: "13/07/2026"},
+            {nome: "raqdtv", dataTxt: "11/07/2026"},
+            {nome: "tobdtv1", dataTxt: "12/07/2026"},
+            {nome: "salesdtv", dataTxt: "18/06/2026"},
+            {nome: "Silvadtv", dataTxt: "15/07/2026"},
+            {nome: "frandtv", dataTxt: "16/07/2026"},
+            {nome: "derdtvlipedtv", dataTxt: "26/07/2026"},
+            {nome: "dtvrafa1", dataTxt: "24/08/2026"},
+            {nome: "eugdtvwanderdtv", dataTxt: "01/08/2026"},
+            {nome: "phdtv1", dataTxt: "11/07/2026"},
+            {nome: "bernadtv", dataTxt: "11/06/2026"},
+            {nome: "dtvpriale", dataTxt: "14/07/2026"},
+            {nome: "1stidtv", dataTxt: "20/07/2026"},
+            {nome: "linedtv1", dataTxt: "24/07/2026"},
+            {nome: "morindtv1", dataTxt: "26/07/2026"},
+            {nome: "christvediv", dataTxt: "27/07/2026"},
+            {nome: "fildtv", dataTxt: "02/08/2026"},
+            {nome: "maradtv", dataTxt: "08/07/2026"},
+            {nome: "tondtvandtv", dataTxt: "10/07/2026"},
+            {nome: "vgedtv", dataTxt: "13/07/2026"},
+            {nome: "vnicdtvtat", dataTxt: "12/07/2026"},
+            {nome: "dtv2ama", dataTxt: "10/07/2026"},
+            {nome: "amidtv", dataTxt: "14/07/2026"},
+            {nome: "dtvsouz", dataTxt: "02/06/2026"},
+            {nome: "maudtv", dataTxt: "11/07/2026"},
+            {nome: "dtvleynig", dataTxt: "14/07/2026"},
+            {nome: "andtv2bal", dataTxt: "14/07/2026"},
+            {nome: "riodtv", dataTxt: "06/06/2026"},
+            {nome: "rdtvtvcrist", dataTxt: "11/07/2026"},
+            {nome: "renatinha", dataTxt: "03/07/2026"},
+            {nome: "igordtv", dataTxt: "31/07/2026"},
+            {nome: "jorgedtv", dataTxt: "08/07/2026"},
+            {nome: "abddtvoliv", dataTxt: "20/07/2026"},
+            {nome: "heridtv", dataTxt: "05/08/2026"},
+            {nome: "dyv10101", dataTxt: "24/07/2026"},
+            {nome: "dandtv", dataTxt: "23/07/2026"},
+            {nome: "vkadudtv", dataTxt: "02/08/2026"},
+            {nome: "thiadtveze", dataTxt: "12/07/2026"},
+            {nome: "dtvnico", dataTxt: "17/07/2026"},
+            {nome: "gildtv1", dataTxt: "02/09/2026"},
+            {nome: "vitordtv", dataTxt: "24/06/2026"},
+            {nome: "sididtv", dataTxt: "09/07/2026"},
+            {nome: "rosedtvwag", dataTxt: "05/06/2026"},
+            {nome: "natalidtv", dataTxt: "14/06/2026"},
+            {nome: "tamidtv", dataTxt: "10/06/2026"},
+            {nome: "paulinhadtv", dataTxt: "16/06/2026"},
+            {nome: "djijotv", dataTxt: "08/07/2026"},
+            {nome: "dtvguilherme", dataTxt: "08/08/2026"},
+            {nome: "naradtv", dataTxt: "19/07/2026"},
+            {nome: "camposdtv", dataTxt: "30/06/2026"},
+            {nome: "camposdtv1", dataTxt: "10/08/2026"},
+            {nome: "dtvkat", dataTxt: "20/08/2026"},
+            {nome: "jvdtvv", dataTxt: "28/07/2026"},
+            {nome: "wildtv", dataTxt: "19/06/2026"},
+            {nome: "gabridtv", dataTxt: "17/07/2026"},
+            {nome: "jessdtv", dataTxt: "06/07/2026"},
+            {nome: "dtvwilsonmckoy", dataTxt: "03/06/2026"},
+            {nome: "R$ 70,00elg", dataTxt: "17/07/2026"},
+            {nome: "marcelodtv", dataTxt: "09/07/2026"},
+            {nome: "antoniodtv", dataTxt: "19/07/2026"},
+            {nome: "dtvfabio", dataTxt: "20/06/2026"},
+            {nome: "joeldtv", dataTxt: "18/08/2026"},
+            {nome: "henriqtv", dataTxt: "08/07/2026"},
+            {nome: "ghdtv1", dataTxt: "16/07/2026"},
+            {nome: "limadtv", dataTxt: "15/07/2026"},
+            {nome: "konadtvlili", dataTxt: "14/07/2026"},
+            {nome: "dtvrafpfedtv2", dataTxt: "10/08/2026"},
+            {nome: "paulodtv", dataTxt: "08/07/2026"},
+            {nome: "willdtv1", dataTxt: "06/06/2026"},
+            {nome: "dtvjuliomors", dataTxt: "01/06/2026"},
+            {nome: "dtveltbreno", dataTxt: "08/08/2026"},
+            {nome: "karindtv", dataTxt: "03/08/2026"},
+            {nome: "dtvwilson1", dataTxt: "11/07/2026"},
+            {nome: "dimasdtv", dataTxt: "11/07/2026"},
+            {nome: "maridtv", dataTxt: "09/08/2026"},
+            {nome: "richdtv", dataTxt: "20/07/2026"},
+            {nome: "vcesardtv", dataTxt: "15/06/2026"},
+            {nome: "lucianatv", dataTxt: "27/07/2026"},
+            {nome: "lucianatv2", dataTxt: "22/07/2026"},
+            {nome: "testealb", dataTxt: "21/07/2026"},
+            {nome: "mafdtv", dataTxt: "23/07/2026"},
+            {nome: "marcosdtv", dataTxt: "24/07/2026"},
+            {nome: "taisdtv", dataTxt: "04/08/2026"},
+            {nome: "luc1501", dataTxt: "28/07/2026"},
+            {nome: "cleuza2026", dataTxt: "31/07/2026"},
+            {nome: "raimundolobo", dataTxt: "29/06/2026"},
+            {nome: "teldtvwedy", dataTxt: "17/07/2026"},
+            {nome: "v1dtv", dataTxt: "01/06/2026"},
+            {nome: "leonardorav", dataTxt: "12/07/2026"},
+            {nome: "carniordtv", dataTxt: "03/10/2026"},
+            {nome: "sididtv1", dataTxt: "04/07/2026"},
+            {nome: "emersondtv", dataTxt: "11/07/2026"},
+            {nome: "janildtv", dataTxt: "14/07/2026"},
+            {nome: "cleberdtv", dataTxt: "05/08/2026"},
+            {nome: "dtvmaicon", dataTxt: "08/08/2026"},
+            {nome: "edsondtvedson1", dataTxt: "08/08/2026"},
+            {nome: "juliodtv", dataTxt: "02/08/2026"},
+            {nome: "danilodtv", dataTxt: "09/06/2026"},
+            {nome: "vitodtv", dataTxt: "15/08/2026"},
+            {nome: "sanderdtv", dataTxt: "19/07/2026"},
+            {nome: "avedtv1", dataTxt: "23/07/2026"},
+            {nome: "gordatv", dataTxt: "21/07/2026"},
+            {nome: "teodtv", dataTxt: "23/07/2026"},
+            {nome: "cezardtv1", dataTxt: "21/07/2026"},
+            {nome: "ortizdtv", dataTxt: "02/08/2026"},
+            {nome: "dtvrob", dataTxt: "25/06/2026"},
+            {nome: "nataliadtv", dataTxt: "26/07/2026"},
+            {nome: "rubensfelix", dataTxt: "26/07/2026"},
+            {nome: "queziafran", dataTxt: "30/06/2026"},
+            {nome: "dtv1alzem", dataTxt: "01/08/2026"},
+            {nome: "12021alzemi", dataTxt: "01/06/2026"},
+            {nome: "conta2", dataTxt: "02/10/2026"}
+        ];
+
+        let telefonesSalvos = JSON.parse(localStorage.getItem('telefonesPlanilha') || '{}');
+        let statusEnviados = JSON.parse(localStorage.getItem('statusEnviados') || '{}');
+        let filtroAtual = 'todos';
+
+        const MENSAGEM_BASE = `Olá {nome} - Sua data de vencimento é *{data}*.
+
+Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
+
+- PIX e-mail = canaisdtv@gmail.com
+- Telefone = 11958357774
+- Se preferir link Mercado Pago = https://mpago.la/1PNvdBx ou https://link.mercadopago.com.br/ddtv`;
+
+        function parseData(txt) {
+            const p = txt.split("/");
+            const d = +p[0], m = +p[1]-1, a = p[2]?+p[2]:2026;
+            return new Date(a, m, d);
+        }
+
+        function getCor(cliente) {
+            const hoje = new Date();
+            const dt = parseData(cliente.dataTxt);
+            const diff = Math.ceil((dt - hoje) / 86400000);
+            if (diff < 0) return 'vermelho';
+            if (diff <= 5) return 'amarelo';
+            return 'verde';
+        }
+
+        function registrarEnvio(nome) {
+            const hoje = new Date().toISOString().slice(0,10);
+            const mes = new Date().toISOString().slice(0,7);
+            statusEnviados[nome] = { data: hoje, mes: mes };
+            localStorage.setItem('statusEnviados', JSON.stringify(statusEnviados));
+        }
+
+        function getStatus(nome) {
+            const info = statusEnviados[nome];
+            const mesAtual = new Date().toISOString().slice(0,7);
+            if (info && info.mes === mesAtual) {
+                return `🟢 Enviado em ${info.data}`;
+            }
+            return '⚪ Pendente';
+        }
+
+        function salvarTelefone(nome, tel) {
+            telefonesSalvos[nome] = tel.replace(/\D/g,'');
+            localStorage.setItem('telefonesPlanilha', JSON.stringify(telefonesSalvos));
+        }
+
+        function abrirWhats(nome, dataTxt) {
+            const tel = telefonesSalvos[nome];
+            if (!tel || tel.length < 10) {
+                alert("Preencha o telefone completo (DDD + número) deste cliente.");
+                return;
+            }
+            registrarEnvio(nome);
+            let msg = MENSAGEM_BASE.replace('{nome}', nome).replace('{data}', dataTxt);
+            window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+            setTimeout(exibirLista, 700);
+        }
+
+        function proximoPendente() {
+            const pend = dados.filter(c => {
+                const telOk = telefonesSalvos[c.nome] && telefonesSalvos[c.nome].length >= 10;
+                return telOk && !statusEnviados[c.nome];
+            }).sort((a,b) => parseData(a.dataTxt) - parseData(b.dataTxt));
+            
+            if (pend.length === 0) return alert("Não há mais pendentes com telefone preenchido!");
+            abrirWhats(pend[0].nome, pend[0].dataTxt);
+        }
+
+        function setFiltro(filtro) {
+            filtroAtual = filtro;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `btn-${filtro}`);
+            });
+            exibirLista();
+        }
+
+        function filtrar() {
+            exibirLista();
+        }
+
+        function exibirLista() {
+            const busca = document.getElementById('busca').value.toLowerCase().trim();
+            const container = document.getElementById('lista');
+            container.innerHTML = '';
+
+            let total=0, pend=0, env=0, venc=0;
+
+            const sorted = [...dados].sort((a,b) => parseData(a.dataTxt) - parseData(b.dataTxt));
+
+            sorted.forEach(c => {
+                if (busca && !c.nome.toLowerCase().includes(busca)) return;
+
+                const statusInfo = getStatus(c.nome);
+                const isEnviado = statusInfo.includes('Enviado');
+                const isVencido = parseData(c.dataTxt) < new Date();
+
+                if (filtroAtual === 'pendentes' && isEnviado) return;
+                if (filtroAtual === 'enviados' && !isEnviado) return;
+                if (filtroAtual === 'vencidos' && !isVencido) return;
+
+                total++;
+                if (isEnviado) env++; else pend++;
+                if (isVencido) venc++;
+
+                const div = document.createElement('div');
+                div.className = `cliente ${getCor(c)}`;
+                div.innerHTML = `
+                    <div>
+                        <strong class="${isVencido ? 'nome-vencido' : ''}">${c.nome}</strong><br>
+                        <span style="color:#aaa">${c.dataTxt}</span>
+                    </div>
+                    <input type="tel" class="telefone-input" value="${telefonesSalvos[c.nome]||''}" 
+                           placeholder="11999999999" onchange="salvarTelefone('${c.nome}', this.value)">
+                    <div style="text-align:right">
+                        <div class="status">${statusInfo}</div><br>
+                        <button class="btn-whatsapp" onclick="abrirWhats('${c.nome}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('total').textContent = total;
+            document.getElementById('pendentes').textContent = pend;
+            document.getElementById('enviados').textContent = env;
+            document.getElementById('vencidos').textContent = venc;
+        }
+
+        window.onload = exibirLista;
+    </script>
+</body>
+</html>
