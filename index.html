@@ -7,12 +7,7 @@
     <style>
         :root { --bg: #0f0f0f; --card: #1e1e1e; --text: #e0e0e0; --green: #25D366; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            padding: 10px; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 10px; }
         h1 { text-align:center; margin:15px 0; color:var(--green); }
         .dashboard { display:flex; justify-content:space-around; background:var(--card); padding:15px; border-radius:12px; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
         .stat { text-align:center; cursor:pointer; padding:8px; border-radius:8px; }
@@ -450,9 +445,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
         function getStatus(nome) {
             const info = statusEnviados[nome];
             const mesAtual = new Date().toISOString().slice(0,7);
-            if (info && info.mes === mesAtual) {
-                return `🟢 Enviado em ${info.data}`;
-            }
+            if (info && info.mes === mesAtual) return `🟢 Enviado em ${info.data}`;
             return '⚪ Pendente';
         }
 
@@ -464,7 +457,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
         function abrirWhats(nome, dataTxt) {
             const tel = telefonesSalvos[nome];
             if (!tel || tel.length < 10) {
-                alert("Preencha o telefone completo (DDD + número) deste cliente.");
+                alert("Preencha o telefone completo deste cliente.");
                 return;
             }
             registrarEnvio(nome);
@@ -485,15 +478,11 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         function setFiltro(filtro) {
             filtroAtual = filtro;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.id === `btn-${filtro}`);
-            });
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.toggle('active', btn.id === `btn-${filtro}`));
             exibirLista();
         }
 
-        function filtrar() {
-            exibirLista();
-        }
+        function filtrar() { exibirLista(); }
 
         function exibirLista() {
             const busca = document.getElementById('busca').value.toLowerCase().trim();
@@ -501,7 +490,6 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
             container.innerHTML = '';
 
             let total=0, pend=0, env=0, venc=0;
-
             const sorted = [...dados].sort((a,b) => parseData(a.dataTxt) - parseData(b.dataTxt));
 
             sorted.forEach(c => {
@@ -510,16 +498,13 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 const statusInfo = getStatus(c.nome);
                 const isEnviado = statusInfo.includes('Enviado');
                 const isVencido = parseData(c.dataTxt) < new Date();
-                const diff = Math.ceil((parseData(c.dataTxt) - new Date()) / 86400000);
 
-                // Filtro Pendentes = apenas amarelos (até 5 dias)
-                if (filtroAtual === 'pendentes' && (isEnviado || diff > 5)) return;
+                if (filtroAtual === 'pendentes' && (isEnviado || Math.ceil((parseData(c.dataTxt) - new Date()) / 86400000) > 5)) return;
                 if (filtroAtual === 'enviados' && !isEnviado) return;
                 if (filtroAtual === 'vencidos' && !isVencido) return;
 
                 total++;
-                if (isEnviado) env++; 
-                else if (!isVencido) pend++;
+                if (isEnviado) env++; else if (!isVencido) pend++;
                 if (isVencido) venc++;
 
                 const div = document.createElement('div');
