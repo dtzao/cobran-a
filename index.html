@@ -22,7 +22,7 @@
         button:disabled { opacity: 0.6; cursor: not-allowed; background: #555; }
         .cliente { background:var(--card); padding:15px; border-radius:12px; margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:center; }
         @media (max-width:768px) { .cliente { grid-template-columns:1fr; } }
-        .telefone-input { padding:10px; background:#2a2a2a; color:white; border:1px solid #444; border-radius:6px; width:100%; }
+        .telefone { padding:10px; background:#2a2a2a; color:white; border:1px solid #444; border-radius:6px; width:100%; text-align:center; font-family: monospace; }
         .btn-whatsapp { background:#25D366; padding:12px 20px; font-size:18px; }
         .verde { border-left:5px solid #4ade80; }
         .amarelo { border-left:5px solid #fbbf24; }
@@ -57,7 +57,6 @@
 
     <script>
         let dados = [];
-        let telefonesSalvos = JSON.parse(localStorage.getItem('telefonesPlanilha') || '{}');
         let statusEnviados = JSON.parse(localStorage.getItem('statusEnviados') || '{}');
         let filtroAtual = 'todos';
         let paginaAtual = 1;
@@ -134,34 +133,14 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
             return '⚪ Pendente';
         }
 
-        function salvarTelefone(nome, dataTxt, tel) {
-            const key = getUniqueKey(nome, dataTxt);
-            const telLimpo = tel.replace(/\D/g, '');
-            
-            if (telefonesSalvos[key] && telefonesSalvos[key] !== telLimpo) {
-                if (!confirm(`Você irá editar o número de ${nome}. Confirmar?`)) {
-                    // Recarrega o valor antigo
-                    document.querySelectorAll('.telefone-input').forEach(input => {
-                        if (input.onchange.toString().includes(nome)) input.value = telefonesSalvos[key];
-                    });
-                    return;
-                }
-            }
-            
-            telefonesSalvos[key] = telLimpo;
-            localStorage.setItem('telefonesPlanilha', JSON.stringify(telefonesSalvos));
-        }
-
-        function abrirWhats(nome, dataTxt) {
-            const key = getUniqueKey(nome, dataTxt);
-            const tel = telefonesSalvos[key];
-            if (!tel || tel.length < 10) {
-                alert("Preencha o telefone completo deste cliente.");
+        function abrirWhats(nome, dataTxt, telefone) {
+            if (!telefone || telefone.length < 10) {
+                alert("Este cliente não possui telefone cadastrado na planilha.");
                 return;
             }
             registrarEnvio(nome, dataTxt);
             let msg = MENSAGEM_BASE.replace('{nome}', nome).replace('{data}', dataTxt);
-            window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(msg)}`, '_blank');
             setTimeout(exibirLista, 800);
         }
 
@@ -174,15 +153,15 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                     try {
                         const rows = parseCSV(csvText);
                         
-                        // Encontra linha do cabeçalho
                         let headerRow = rows.findIndex(row => row.some(cell => cell.toUpperCase().includes('NOME')));
                         if (headerRow === -1) throw new Error("Cabeçalho não encontrado.");
 
                         dados = rows.slice(headerRow + 1)
                             .map(row => {
-                                const nome = row[6] || "";        // Coluna G (índice 6)
-                                const dataTxt = row[20] || "";    // Coluna U (índice 20)
-                                return { nome, dataTxt };
+                                const nome = row[6] || "";      // Coluna G
+                                const telefone = row[5] || "";  // Coluna F
+                                const dataTxt = row[21] || "";  // Coluna V
+                                return { nome, telefone, dataTxt };
                             })
                             .filter(c => c.nome && 
                                    c.dataTxt && 
@@ -219,13 +198,12 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         function proximoPendente() {
             const pend = dados.filter(c => {
-                const key = getUniqueKey(c.nome, c.dataTxt);
-                const telOk = telefonesSalvos[key] && telefonesSalvos[key].length >= 10;
-                return telOk && !statusEnviados[key] && isPendente(c);
+                const telOk = c.telefone && c.telefone.replace(/\D/g, '').length >= 10;
+                return telOk && !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c);
             }).sort((a, b) => parseData(a.dataTxt) - parseData(b.dataTxt));
 
             if (pend.length === 0) return alert("Não há mais pendentes com telefone nos próximos 5 dias!");
-            abrirWhats(pend[0].nome, pend[0].dataTxt);
+            abrirWhats(pend[0].nome, pend[0].dataTxt, pend[0].telefone.replace(/\D/g, ''));
         }
 
         function setFiltro(filtro) {
@@ -272,6 +250,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 const key = getUniqueKey(c.nome, c.dataTxt);
                 const statusInfo = getStatus(c.nome, c.dataTxt);
                 const isVencido = parseData(c.dataTxt) < getHoje();
+                const telLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
 
                 const div = document.createElement('div');
                 div.className = `cliente ${getCor(c)}`;
@@ -280,12 +259,12 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                         <strong class="${isVencido ? 'nome-vencido' : ''}">${c.nome}</strong><br>
                         <span style="color:#aaa">${c.dataTxt}</span>
                     </div>
-                    <input type="tel" class="telefone-input" value="${telefonesSalvos[key]||''}"
-                           placeholder="11999999999" 
-                           onchange="salvarTelefone('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}', this.value)">
+                    <div class="telefone">${telLimpo ? telLimpo : 'Sem telefone'}</div>
                     <div style="text-align:right">
                         <div class="status">${statusInfo}</div><br>
-                        <button class="btn-whatsapp" onclick="abrirWhats('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
+                        <button class="btn-whatsapp" onclick="abrirWhats('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}', '${telLimpo}')">
+                            💬 ABRIR WHATSAPP
+                        </button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -294,7 +273,10 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
             // Dashboard
             const hoje = getHoje();
             const total = dados.length;
-            const pend = dados.filter(c => !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c)).length;
+            const pend = dados.filter(c => {
+                const telOk = c.telefone && c.telefone.replace(/\D/g, '').length >= 10;
+                return telOk && !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c);
+            }).length;
             const env = dados.filter(c => {
                 const k = getUniqueKey(c.nome, c.dataTxt);
                 return statusEnviados[k] && statusEnviados[k].mes === new Date().toISOString().slice(0,7);
