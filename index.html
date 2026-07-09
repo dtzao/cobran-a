@@ -70,7 +70,8 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 - Telefone = 11958357774
 - Se preferir link Mercado Pago = https://mpago.la/1PNvdBx ou https://link.mercadopago.com.br/ddtv`;
 
-        const SHEET_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/edit?usp=sharing";
+        // === URL DA PLANILHA (GVIZ - mais robusto) ===
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/gviz/tq?tqx=out:json";
 
         function getUniqueKey(nome, dataTxt) {
             return `${nome.trim()}|${dataTxt.trim()}`;
@@ -138,36 +139,43 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         function carregarPlanilha() {
             document.getElementById('erro').style.display = 'none';
+            
             fetch(SHEET_URL)
                 .then(r => r.text())
                 .then(text => {
                     try {
-                        const jsonStr = text.substring(47).slice(0, -2);
+                        // === SOLUÇÃO MAIS CONFIÁVEL ===
+                        const inicio = text.indexOf("{");
+                        const fim = text.lastIndexOf("}");
+                        if (inicio === -1 || fim === -1) throw new Error("JSON não encontrado");
+                        
+                        const jsonStr = text.substring(inicio, fim + 1);
                         const json = JSON.parse(jsonStr);
                         
                         dados = json.table.rows.map(row => ({
                             nome: row.c[0]?.v || "",
                             dataTxt: row.c[1]?.f || row.c[1]?.v || ""
                         })).filter(c => {
-                            // Ignora linha de cabeçalho e linhas vazias
                             return c.nome && 
                                    c.dataTxt && 
-                                   c.nome.toLowerCase() !== "nome" && 
+                                   c.nome.toLowerCase() !== "nome" &&
                                    !c.nome.toLowerCase().includes("data");
                         });
-                       
+
                         if (dados.length === 0) {
-                            throw new Error("Nenhum dado válido encontrado.");
+                            throw new Error("Nenhum dado válido encontrado na planilha.");
                         }
+
                         exibirLista();
                     } catch(e) {
-                        console.error("Erro ao processar planilha:", e);
-                        mostrarErro("Erro ao processar a planilha. Verifique se ela está compartilhada corretamente (Qualquer pessoa com o link → Visualizador).");
+                        console.error("Erro ao processar:", e);
+                        console.log("Resposta bruta do Google:", text); // Para debug
+                        mostrarErro("Erro ao processar a planilha. Verifique se ela está compartilhada como 'Qualquer pessoa com o link → Visualizador'.");
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    mostrarErro("Não foi possível carregar a planilha. Verifique sua conexão e permissões.");
+                    mostrarErro("Não foi possível carregar a planilha. Verifique sua conexão.");
                 });
         }
 
@@ -226,23 +234,19 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 if (filtroAtual === 'pendentes') return !isEnviado && isPendente(c);
                 if (filtroAtual === 'enviados') return isEnviado;
                 if (filtroAtual === 'vencidos') return isVencido;
-                return true; // todos
+                return true;
             });
 
-            // Ordenar por data
             filtered.sort((a, b) => parseData(a.dataTxt) - parseData(b.dataTxt));
 
-            // Paginação
             const totalPaginas = Math.ceil(filtered.length / ITENS_POR_PAGINA) || 1;
             if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
             const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
             const paginaDados = filtered.slice(inicio, inicio + ITENS_POR_PAGINA);
 
-            // Renderizar clientes
             paginaDados.forEach(c => {
                 const key = getUniqueKey(c.nome, c.dataTxt);
                 const statusInfo = getStatus(c.nome, c.dataTxt);
-                const isEnviado = statusInfo.includes('Enviado');
                 const isVencido = parseData(c.dataTxt) < getHoje();
 
                 const div = document.createElement('div');
@@ -264,17 +268,12 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 container.appendChild(div);
             });
 
-            // Atualizar dashboard (sempre com dados completos)
+            // Dashboard com totais globais
             const hoje = getHoje();
             const total = dados.length;
-            const pend = dados.filter(c => {
-                const key = getUniqueKey(c.nome, c.dataTxt);
-                return !statusEnviados[key] && isPendente(c);
-            }).length;
-            const env = dados.filter(c => {
-                const key = getUniqueKey(c.nome, c.dataTxt);
-                return statusEnviados[key] && statusEnviados[key].mes === new Date().toISOString().slice(0,7);
-            }).length;
+            const pend = dados.filter(c => !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c)).length;
+            const env = dados.filter(c => statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && 
+                                         statusEnviados[getUniqueKey(c.nome, c.dataTxt)].mes === new Date().toISOString().slice(0,7)).length;
             const venc = dados.filter(c => parseData(c.dataTxt) < hoje).length;
 
             document.getElementById('total').textContent = total;
