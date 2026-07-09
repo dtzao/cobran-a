@@ -71,40 +71,22 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/export?format=csv&gid=0";
 
-        // ==================== PARSER CSV ROBUSTO ====================
         function parseCSV(csvText) {
             const lines = csvText.trim().split(/\r?\n/);
-            const result = [];
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                
+            return lines.map(line => {
                 const row = [];
                 let current = '';
                 let inQuotes = false;
-                
-                for (let j = 0; j < line.length; j++) {
-                    const char = line[j];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) {
                         row.push(current.trim());
                         current = '';
-                    } else {
-                        current += char;
-                    }
+                    } else current += char;
                 }
                 row.push(current.trim());
-                
-                // Remove aspas do início e fim de cada campo
-                const cleanRow = row.map(cell => 
-                    cell.replace(/^"|"$/g, '').trim()
-                );
-                
-                result.push(cleanRow);
-            }
-            return result;
+                return row.map(cell => cell.replace(/^"|"$/g, '').trim());
+            });
         }
 
         function getUniqueKey(nome, dataTxt) {
@@ -180,26 +162,35 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                     try {
                         const rows = parseCSV(csvText);
                         
-                        if (rows.length < 1) throw new Error("CSV vazio");
-                        
-                        const header = rows[0].map(h => h.toLowerCase());
-                        const nomeIdx = header.findIndex(h => h.includes('nome'));
-                        const dataIdx = header.findIndex(h => h.includes('data') || h.includes('vencimento'));
-                        
-                        if (nomeIdx === -1 || dataIdx === -1) {
-                            throw new Error("Colunas 'Nome' ou 'Data/Vencimento' não encontradas.");
-                        }
+                        // Encontra a linha do cabeçalho com "NOME"
+                        let headerRow = rows.findIndex(row => 
+                            row.some(cell => cell.toUpperCase().includes('NOME'))
+                        );
 
-                        dados = rows.slice(1)
-                            .map(row => ({
-                                nome: row[nomeIdx] || "",
-                                dataTxt: row[dataIdx] || ""
-                            }))
+                        if (headerRow === -1) throw new Error("Cabeçalho não encontrado.");
+
+                        const header = rows[headerRow].map(h => h.toUpperCase());
+                        const nomeIdx = header.findIndex(h => h.includes('NOME'));
+                        
+                        // A data de vencimento está sempre na última coluna
+                        dados = rows.slice(headerRow + 1)
+                            .map(row => {
+                                const nome = row[nomeIdx] || "";
+                                // Pega a última coluna que tem data (formato xx/xx/xxxx)
+                                let dataTxt = "";
+                                for (let i = row.length - 1; i >= 0; i--) {
+                                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(row[i])) {
+                                        dataTxt = row[i];
+                                        break;
+                                    }
+                                }
+                                return { nome, dataTxt };
+                            })
                             .filter(c => c.nome && c.dataTxt && 
                                    !c.nome.toLowerCase().includes("nome") &&
-                                   c.dataTxt.length > 3);
+                                   c.nome.length > 2);
 
-                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado na planilha.");
+                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado.");
                         
                         exibirLista();
                     } catch(e) {
@@ -290,16 +281,16 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                         <span style="color:#aaa">${c.dataTxt}</span>
                     </div>
                     <input type="tel" class="telefone-input" value="${telefonesSalvos[key]||''}"
-                           placeholder="11999999999" onchange="salvarTelefone('${c.nome}', '${c.dataTxt}', this.value)">
+                           placeholder="11999999999" onchange="salvarTelefone('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}', this.value)">
                     <div style="text-align:right">
                         <div class="status">${statusInfo}</div><br>
-                        <button class="btn-whatsapp" onclick="abrirWhats('${c.nome}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
+                        <button class="btn-whatsapp" onclick="abrirWhats('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
                     </div>
                 `;
                 container.appendChild(div);
             });
 
-            // Atualiza dashboard
+            // Dashboard
             const hoje = getHoje();
             const total = dados.length;
             const pend = dados.filter(c => !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c)).length;
