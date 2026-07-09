@@ -136,7 +136,19 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         function salvarTelefone(nome, dataTxt, tel) {
             const key = getUniqueKey(nome, dataTxt);
-            telefonesSalvos[key] = tel.replace(/\D/g, '');
+            const telLimpo = tel.replace(/\D/g, '');
+            
+            if (telefonesSalvos[key] && telefonesSalvos[key] !== telLimpo) {
+                if (!confirm(`Você irá editar o número de ${nome}. Confirmar?`)) {
+                    // Recarrega o valor antigo
+                    document.querySelectorAll('.telefone-input').forEach(input => {
+                        if (input.onchange.toString().includes(nome)) input.value = telefonesSalvos[key];
+                    });
+                    return;
+                }
+            }
+            
+            telefonesSalvos[key] = telLimpo;
             localStorage.setItem('telefonesPlanilha', JSON.stringify(telefonesSalvos));
         }
 
@@ -162,35 +174,23 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                     try {
                         const rows = parseCSV(csvText);
                         
-                        // Encontra a linha do cabeçalho com "NOME"
-                        let headerRow = rows.findIndex(row => 
-                            row.some(cell => cell.toUpperCase().includes('NOME'))
-                        );
-
+                        // Encontra linha do cabeçalho
+                        let headerRow = rows.findIndex(row => row.some(cell => cell.toUpperCase().includes('NOME')));
                         if (headerRow === -1) throw new Error("Cabeçalho não encontrado.");
 
-                        const header = rows[headerRow].map(h => h.toUpperCase());
-                        const nomeIdx = header.findIndex(h => h.includes('NOME'));
-                        
-                        // A data de vencimento está sempre na última coluna
                         dados = rows.slice(headerRow + 1)
                             .map(row => {
-                                const nome = row[nomeIdx] || "";
-                                // Pega a última coluna que tem data (formato xx/xx/xxxx)
-                                let dataTxt = "";
-                                for (let i = row.length - 1; i >= 0; i--) {
-                                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(row[i])) {
-                                        dataTxt = row[i];
-                                        break;
-                                    }
-                                }
+                                const nome = row[6] || "";        // Coluna G (índice 6)
+                                const dataTxt = row[20] || "";    // Coluna U (índice 20)
                                 return { nome, dataTxt };
                             })
-                            .filter(c => c.nome && c.dataTxt && 
+                            .filter(c => c.nome && 
+                                   c.dataTxt && 
+                                   /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(c.dataTxt) &&
                                    !c.nome.toLowerCase().includes("nome") &&
                                    c.nome.length > 2);
 
-                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado.");
+                        if (dados.length === 0) throw new Error("Nenhum cliente com nome + data encontrado.");
                         
                         exibirLista();
                     } catch(e) {
@@ -281,7 +281,8 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                         <span style="color:#aaa">${c.dataTxt}</span>
                     </div>
                     <input type="tel" class="telefone-input" value="${telefonesSalvos[key]||''}"
-                           placeholder="11999999999" onchange="salvarTelefone('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}', this.value)">
+                           placeholder="11999999999" 
+                           onchange="salvarTelefone('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}', this.value)">
                     <div style="text-align:right">
                         <div class="status">${statusInfo}</div><br>
                         <button class="btn-whatsapp" onclick="abrirWhats('${c.nome.replace(/'/g, "\\'")}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
