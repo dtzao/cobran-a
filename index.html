@@ -70,8 +70,8 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 - Telefone = 11958357774
 - Se preferir link Mercado Pago = https://mpago.la/1PNvdBx ou https://link.mercadopago.com.br/ddtv`;
 
-        // === URL DA PLANILHA (GVIZ - mais robusto) ===
-        const SHEET_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/gviz/tq?tqx=out:json";
+        // URL em CSV (mais estável)
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/export?format=csv&gid=0";
 
         function getUniqueKey(nome, dataTxt) {
             return `${nome.trim()}|${dataTxt.trim()}`;
@@ -104,9 +104,9 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
         function registrarEnvio(nome, dataTxt) {
             const key = getUniqueKey(nome, dataTxt);
-            const hoje = new Date().toISOString().slice(0,10);
+            const hojeStr = new Date().toISOString().slice(0,10);
             const mes = new Date().toISOString().slice(0,7);
-            statusEnviados[key] = { data: hoje, mes: mes };
+            statusEnviados[key] = { data: hojeStr, mes: mes };
             localStorage.setItem('statusEnviados', JSON.stringify(statusEnviados));
         }
 
@@ -140,42 +140,41 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
         function carregarPlanilha() {
             document.getElementById('erro').style.display = 'none';
             
-            fetch(SHEET_URL)
+            fetch(SHEET_CSV_URL)
                 .then(r => r.text())
-                .then(text => {
+                .then(csvText => {
                     try {
-                        // === SOLUÇÃO MAIS CONFIÁVEL ===
-                        const inicio = text.indexOf("{");
-                        const fim = text.lastIndexOf("}");
-                        if (inicio === -1 || fim === -1) throw new Error("JSON não encontrado");
+                        const rows = csvText.trim().split('\n').map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')));
                         
-                        const jsonStr = text.substring(inicio, fim + 1);
-                        const json = JSON.parse(jsonStr);
-                        
-                        dados = json.table.rows.map(row => ({
-                            nome: row.c[0]?.v || "",
-                            dataTxt: row.c[1]?.f || row.c[1]?.v || ""
-                        })).filter(c => {
-                            return c.nome && 
-                                   c.dataTxt && 
-                                   c.nome.toLowerCase() !== "nome" &&
-                                   !c.nome.toLowerCase().includes("data");
-                        });
+                        // Encontra colunas Nome e Data (ajuste os índices se necessário)
+                        const header = rows[0].map(h => h.toLowerCase());
+                        const nomeIdx = header.findIndex(h => h.includes('nome'));
+                        const dataIdx = header.findIndex(h => h.includes('data') || h.includes('vencimento'));
 
-                        if (dados.length === 0) {
-                            throw new Error("Nenhum dado válido encontrado na planilha.");
+                        if (nomeIdx === -1 || dataIdx === -1) {
+                            throw new Error("Colunas Nome ou Data não encontradas.");
                         }
+
+                        dados = rows.slice(1) // pula cabeçalho
+                            .map(row => ({
+                                nome: row[nomeIdx] || "",
+                                dataTxt: row[dataIdx] || ""
+                            }))
+                            .filter(c => c.nome && c.dataTxt && 
+                                   !c.nome.toLowerCase().includes("nome") && 
+                                   c.dataTxt.length > 4);
+
+                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado.");
 
                         exibirLista();
                     } catch(e) {
-                        console.error("Erro ao processar:", e);
-                        console.log("Resposta bruta do Google:", text); // Para debug
-                        mostrarErro("Erro ao processar a planilha. Verifique se ela está compartilhada como 'Qualquer pessoa com o link → Visualizador'.");
+                        console.error(e);
+                        mostrarErro("Erro ao processar CSV. Verifique se a planilha está compartilhada publicamente.");
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    mostrarErro("Não foi possível carregar a planilha. Verifique sua conexão.");
+                    mostrarErro("Não foi possível carregar a planilha. Verifique conexão e permissões.");
                 });
         }
 
@@ -199,16 +198,14 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 return telOk && !statusEnviados[key] && isPendente(c);
             }).sort((a, b) => parseData(a.dataTxt) - parseData(b.dataTxt));
 
-            if (pend.length === 0) {
-                return alert("Não há mais pendentes com telefone nos próximos 5 dias!");
-            }
+            if (pend.length === 0) return alert("Não há mais pendentes com telefone nos próximos 5 dias!");
             abrirWhats(pend[0].nome, pend[0].dataTxt);
         }
 
         function setFiltro(filtro) {
             filtroAtual = filtro;
             paginaAtual = 1;
-            document.querySelectorAll('.filter-btn').forEach(btn =>
+            document.querySelectorAll('.filter-btn').forEach(btn => 
                 btn.classList.toggle('active', btn.id === `btn-${filtro}`)
             );
             exibirLista();
@@ -226,7 +223,6 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
             let filtered = dados.filter(c => {
                 if (busca && !c.nome.toLowerCase().includes(busca)) return false;
-
                 const key = getUniqueKey(c.nome, c.dataTxt);
                 const isEnviado = !!statusEnviados[key] && statusEnviados[key].mes === new Date().toISOString().slice(0,7);
                 const isVencido = parseData(c.dataTxt) < getHoje();
@@ -256,10 +252,8 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                         <strong class="${isVencido ? 'nome-vencido' : ''}">${c.nome}</strong><br>
                         <span style="color:#aaa">${c.dataTxt}</span>
                     </div>
-                    <input type="tel" class="telefone-input" 
-                           value="${telefonesSalvos[key]||''}"
-                           placeholder="11999999999" 
-                           onchange="salvarTelefone('${c.nome}', '${c.dataTxt}', this.value)">
+                    <input type="tel" class="telefone-input" value="${telefonesSalvos[key]||''}"
+                           placeholder="11999999999" onchange="salvarTelefone('${c.nome}', '${c.dataTxt}', this.value)">
                     <div style="text-align:right">
                         <div class="status">${statusInfo}</div><br>
                         <button class="btn-whatsapp" onclick="abrirWhats('${c.nome}', '${c.dataTxt}')">💬 ABRIR WHATSAPP</button>
@@ -268,12 +262,14 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 container.appendChild(div);
             });
 
-            // Dashboard com totais globais
+            // Dashboard
             const hoje = getHoje();
             const total = dados.length;
             const pend = dados.filter(c => !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c)).length;
-            const env = dados.filter(c => statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && 
-                                         statusEnviados[getUniqueKey(c.nome, c.dataTxt)].mes === new Date().toISOString().slice(0,7)).length;
+            const env = dados.filter(c => {
+                const k = getUniqueKey(c.nome, c.dataTxt);
+                return statusEnviados[k] && statusEnviados[k].mes === new Date().toISOString().slice(0,7);
+            }).length;
             const venc = dados.filter(c => parseData(c.dataTxt) < hoje).length;
 
             document.getElementById('total').textContent = total;
@@ -302,7 +298,6 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
             exibirLista();
         }
 
-        // Inicialização
         window.onload = carregarPlanilha;
     </script>
 </body>
