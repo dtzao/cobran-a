@@ -35,7 +35,6 @@
 </head>
 <body>
     <h1>📋 CENTRAL WHATSAPP - COBRANÇA</h1>
-  
     <div class="dashboard">
         <div class="stat" onclick="setFiltro('todos')"><div class="stat-value" id="total">0</div><div>Todos</div></div>
         <div class="stat" onclick="setFiltro('pendentes')"><div class="stat-value" id="pendentes" style="color:#fbbf24;">0</div><div>Pendentes</div></div>
@@ -70,9 +69,44 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 - Telefone = 11958357774
 - Se preferir link Mercado Pago = https://mpago.la/1PNvdBx ou https://link.mercadopago.com.br/ddtv`;
 
-        // URL em CSV (mais estável)
         const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/export?format=csv&gid=0";
-        
+
+        // ==================== PARSER CSV ROBUSTO ====================
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split(/\r?\n/);
+            const result = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const row = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                row.push(current.trim());
+                
+                // Remove aspas do início e fim de cada campo
+                const cleanRow = row.map(cell => 
+                    cell.replace(/^"|"$/g, '').trim()
+                );
+                
+                result.push(cleanRow);
+            }
+            return result;
+        }
+
         function getUniqueKey(nome, dataTxt) {
             return `${nome.trim()}|${dataTxt.trim()}`;
         }
@@ -144,37 +178,38 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 .then(r => r.text())
                 .then(csvText => {
                     try {
-                        const rows = csvText.trim().split('\n').map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')));
+                        const rows = parseCSV(csvText);
                         
-                        // Encontra colunas Nome e Data (ajuste os índices se necessário)
+                        if (rows.length < 1) throw new Error("CSV vazio");
+                        
                         const header = rows[0].map(h => h.toLowerCase());
                         const nomeIdx = header.findIndex(h => h.includes('nome'));
                         const dataIdx = header.findIndex(h => h.includes('data') || h.includes('vencimento'));
-
+                        
                         if (nomeIdx === -1 || dataIdx === -1) {
-                            throw new Error("Colunas Nome ou Data não encontradas.");
+                            throw new Error("Colunas 'Nome' ou 'Data/Vencimento' não encontradas.");
                         }
 
-                        dados = rows.slice(1) // pula cabeçalho
+                        dados = rows.slice(1)
                             .map(row => ({
                                 nome: row[nomeIdx] || "",
                                 dataTxt: row[dataIdx] || ""
                             }))
                             .filter(c => c.nome && c.dataTxt && 
-                                   !c.nome.toLowerCase().includes("nome") && 
-                                   c.dataTxt.length > 4);
+                                   !c.nome.toLowerCase().includes("nome") &&
+                                   c.dataTxt.length > 3);
 
-                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado.");
-
+                        if (dados.length === 0) throw new Error("Nenhum cliente encontrado na planilha.");
+                        
                         exibirLista();
                     } catch(e) {
                         console.error(e);
-                        mostrarErro("Erro ao processar CSV. Verifique se a planilha está compartilhada publicamente.");
+                        mostrarErro("Erro ao processar CSV: " + e.message);
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    mostrarErro("Não foi possível carregar a planilha. Verifique conexão e permissões.");
+                    mostrarErro("Não foi possível carregar a planilha.");
                 });
         }
 
@@ -205,7 +240,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
         function setFiltro(filtro) {
             filtroAtual = filtro;
             paginaAtual = 1;
-            document.querySelectorAll('.filter-btn').forEach(btn => 
+            document.querySelectorAll('.filter-btn').forEach(btn =>
                 btn.classList.toggle('active', btn.id === `btn-${filtro}`)
             );
             exibirLista();
@@ -223,6 +258,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
             let filtered = dados.filter(c => {
                 if (busca && !c.nome.toLowerCase().includes(busca)) return false;
+                
                 const key = getUniqueKey(c.nome, c.dataTxt);
                 const isEnviado = !!statusEnviados[key] && statusEnviados[key].mes === new Date().toISOString().slice(0,7);
                 const isVencido = parseData(c.dataTxt) < getHoje();
@@ -237,6 +273,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
 
             const totalPaginas = Math.ceil(filtered.length / ITENS_POR_PAGINA) || 1;
             if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
             const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
             const paginaDados = filtered.slice(inicio, inicio + ITENS_POR_PAGINA);
 
@@ -262,7 +299,7 @@ Não deixe de curtir o MELHOR CONTEÚDO DISPONÍVEL! 😄
                 container.appendChild(div);
             });
 
-            // Dashboard
+            // Atualiza dashboard
             const hoje = getHoje();
             const total = dados.length;
             const pend = dados.filter(c => !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c)).length;
