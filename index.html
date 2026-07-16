@@ -5,164 +5,184 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM WhatsApp - Cobrança</title>
     <style>
-        :root { 
-            --bg: #0f0f0f; 
-            --card: #1e1e1e; 
-            --text: #e0e0e0; 
-            --green: #25D366; 
+        :root {
+            --bg: #0f0f0f;
+            --card: #1e1e1e;
+            --text: #e0e0e0;
+            --green: #25D366;
         }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            padding: 15px; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 15px;
             line-height: 1.5;
         }
-        h1 { 
-            text-align:center; 
-            margin:20px 0; 
-            color:var(--green); 
+        h1 {
+            text-align:center;
+            margin:20px 0;
+            color:var(--green);
             font-size: 1.8em;
         }
-        .dashboard { 
-            display:flex; 
-            justify-content:space-around; 
-            background:var(--card); 
-            padding:15px; 
-            border-radius:12px; 
-            margin-bottom:20px; 
-            flex-wrap:wrap; 
-            gap:10px; 
+        .dashboard {
+            display:flex;
+            justify-content:space-around;
+            background:var(--card);
+            padding:15px;
+            border-radius:12px;
+            margin-bottom:20px;
+            flex-wrap:wrap;
+            gap:10px;
         }
-        .stat { 
-            text-align:center; 
-            cursor:pointer; 
-            padding:10px; 
-            border-radius:10px; 
+        .stat {
+            text-align:center;
+            cursor:pointer;
+            padding:10px;
+            border-radius:10px;
             min-width: 100px;
         }
         .stat:hover { background:#333; }
         .stat-value { font-size:2em; font-weight:bold; }
-        
-        .filters { 
-            display:flex; 
-            gap:8px; 
-            margin-bottom:15px; 
-            flex-wrap:wrap; 
-            justify-content:center; 
+       
+        .filters {
+            display:flex;
+            gap:8px;
+            margin-bottom:15px;
+            flex-wrap:wrap;
+            justify-content:center;
         }
-        .filter-btn { 
-            padding:10px 18px; 
-            background:#2a2a2a; 
-            color:white; 
-            border:none; 
-            border-radius:8px; 
-            cursor:pointer; 
-            font-weight:bold; 
+        .filter-btn {
+            padding:10px 18px;
+            background:#2a2a2a;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:bold;
         }
-        .filter-btn.active { 
-            background:var(--green); 
-            color:black; 
+        .filter-btn.active {
+            background:var(--green);
+            color:black;
         }
-
-        .controls { 
-            display:flex; 
-            flex-wrap:wrap; 
-            gap:10px; 
-            margin-bottom:20px; 
-            justify-content:center; 
-            align-items:center; 
+        .controls {
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-bottom:20px;
+            justify-content:center;
+            align-items:center;
         }
-        input { 
-            padding:12px 15px; 
-            border-radius:8px; 
-            background:#2a2a2a; 
-            color:white; 
-            min-width:250px; 
+        input {
+            padding:12px 15px;
+            border-radius:8px;
+            background:#2a2a2a;
+            color:white;
+            min-width:250px;
             border: none;
         }
-        button { 
-            padding:12px 18px; 
-            border-radius:8px; 
-            background:var(--green); 
-            color:white; 
-            cursor:pointer; 
-            font-weight:bold; 
+        button {
+            padding:12px 18px;
+            border-radius:8px;
+            background:var(--green);
+            color:white;
+            cursor:pointer;
+            font-weight:bold;
             border: none;
         }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .cliente { 
-            background:var(--card); 
-            padding:16px; 
-            border-radius:12px; 
-            margin-bottom:12px; 
-            display:grid; 
-            grid-template-columns:1fr 1fr auto; 
-            gap:12px; 
-            align-items:center; 
+        /* === PAGINAÇÃO === */
+        .paginacao{
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            gap:15px;
+            margin:25px 0;
         }
-        @media (max-width:768px) { 
-            .cliente { grid-template-columns:1fr; } 
+        .paginacao button{
+            padding:10px 18px;
+            font-size:18px;
         }
-        .telefone { 
-            padding:12px; 
-            background:#2a2a2a; 
-            color:white; 
-            border:1px solid #444; 
-            border-radius:8px; 
-            text-align:center; 
-            font-family: monospace; 
+        #contadorPaginas{
+            font-size:18px;
+            font-weight:bold;
+            min-width:80px;
+            text-align:center;
+        }
+
+        .cliente {
+            background:var(--card);
+            padding:16px;
+            border-radius:12px;
+            margin-bottom:12px;
+            display:grid;
+            grid-template-columns:1fr 1fr auto;
+            gap:12px;
+            align-items:center;
+        }
+        @media (max-width:768px) {
+            .cliente { grid-template-columns:1fr; }
+        }
+        .telefone {
+            padding:12px;
+            background:#2a2a2a;
+            color:white;
+            border:1px solid #444;
+            border-radius:8px;
+            text-align:center;
+            font-family: monospace;
             font-size: 1.1em;
         }
-        .btn-whatsapp { 
-            background:#25D366; 
-            padding:14px 20px; 
-            font-size:18px; 
+        .btn-whatsapp {
+            background:#25D366;
+            padding:14px 20px;
+            font-size:18px;
             font-weight: bold;
         }
-
-        .verde   { border-left:5px solid #4ade80; }
+        .verde { border-left:5px solid #4ade80; }
         .amarelo { border-left:5px solid #fbbf24; }
         .vermelho{ border-left:5px solid #ef4444; }
-
         .nome-vencido { color: #ef4444 !important; font-weight: bold; }
-        #erro { 
-            color: #ef4444; 
-            text-align:center; 
-            margin:15px; 
-            padding:12px; 
-            background:#330000; 
-            border-radius:8px; 
-            display:none; 
+        #erro {
+            color: #ef4444;
+            text-align:center;
+            margin:15px;
+            padding:12px;
+            background:#330000;
+            border-radius:8px;
+            display:none;
         }
     </style>
 </head>
 <body>
     <h1>📋 CENTRAL WHATSAPP - COBRANÇA</h1>
-    
+   
     <div class="dashboard">
         <div class="stat" onclick="setFiltro('todos')"><div class="stat-value" id="total">0</div><div>Todos</div></div>
         <div class="stat" onclick="setFiltro('pendentes')"><div class="stat-value" id="pendentes" style="color:#fbbf24;">0</div><div>Pendentes</div></div>
         <div class="stat" onclick="setFiltro('enviados')"><div class="stat-value" id="enviados" style="color:#4ade80;">0</div><div>Enviados</div></div>
         <div class="stat" onclick="setFiltro('vencidos')"><div class="stat-value" id="vencidos" style="color:#ef4444;">0</div><div>Vencidos</div></div>
     </div>
-
     <div class="filters">
         <button class="filter-btn active" id="btn-todos" onclick="setFiltro('todos')">Todos</button>
         <button class="filter-btn" id="btn-pendentes" onclick="setFiltro('pendentes')">Pendentes</button>
         <button class="filter-btn" id="btn-enviados" onclick="setFiltro('enviados')">Enviados</button>
         <button class="filter-btn" id="btn-vencidos" onclick="setFiltro('vencidos')">Vencidos</button>
     </div>
-
     <div class="controls">
         <input type="text" id="busca" placeholder="🔎 Buscar por nome..." onkeyup="filtrar()">
         <button onclick="proximoPendente()">➡️ PRÓXIMO PENDENTE</button>
     </div>
-
     <div id="erro"></div>
     <div id="lista"></div>
+
+    <!-- PAGINAÇÃO -->
+    <div id="paginacao" class="paginacao">
+        <button onclick="paginaAnterior()">⬅</button>
+        <span id="contadorPaginas">1 / 1</span>
+        <button onclick="proximaPagina()">➡</button>
+    </div>
 
     <script>
         let dados = [];
@@ -174,26 +194,18 @@
         // === MENSAGEM CORRIGIDA ===
         const MENSAGEM_BASE =
 "Olá, *{nome}*! " +
-
 "Data de vencimento: *{data}*\n\n" +
-
 "*REALIZE O PAGAMENTO DO MELHOR CONTEÚDO!*\n\n" +
-
 "*FORMAS DE PAGAMENTO*\n\n" +
-
 "PIX (E-mail)\n" +
 "canaisdtv@gmail.com\n\n" +
-
 "PIX (Telefone)\n" +
 "11958357774\n\n" +
-
-"Mercado Pago\n" +
+"LINK do Mercado Pago\n" +
 "https://mpago.la/1PNvdBx\n\n" +
-"ou\n" +
+"ou\n\n" +
 "https://link.mercadopago.com.br/ddtv\n\n" +
-
 "*ENVIE O COMPROVANTE* para agilizar a liberação.\n\n" +
-
 "Obrigado pela preferência!";
 
         const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18zgsz_yr8dsldd5CX5OGXtqHH0nf0Xc1Si-rhmJMlXs/export?format=csv&gid=0";
@@ -256,43 +268,39 @@
                 alert("Este cliente não possui telefone cadastrado.");
                 return;
             }
-
             registrarEnvio(nome, dataTxt);
-            
+           
             let msg = MENSAGEM_BASE
                 .replace('{nome}', nome.trim())
                 .replace('{data}', dataTxt);
-
             const url = `https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
-            
+           
             setTimeout(exibirLista, 700);
         }
 
         function carregarPlanilha() {
             document.getElementById('erro').style.display = 'none';
-          
+         
             fetch(SHEET_CSV_URL)
                 .then(r => r.text())
                 .then(csvText => {
                     try {
                         const rows = parseCSV(csvText);
                         let headerRow = rows.findIndex(row => row.some(cell => cell.toUpperCase().includes('NOME')));
-                        
+                       
                         if (headerRow === -1) throw new Error("Cabeçalho não encontrado.");
-
                         dados = rows.slice(headerRow + 1)
                             .map(row => ({
                                 nome: (row[7] || "").trim(),
                                 telefone: (row[5] || "").trim(),
                                 dataTxt: (row[21] || "").trim()
                             }))
-                            .filter(c => 
-                                c.nome.length > 2 && 
-                                c.dataTxt && 
+                            .filter(c =>
+                                c.nome.length > 2 &&
+                                c.dataTxt &&
                                 /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(c.dataTxt)
                             );
-
                         if (dados.length === 0) throw new Error("Nenhum cliente encontrado.");
                         exibirLista();
                     } catch(e) {
@@ -324,16 +332,15 @@
                 const telOk = c.telefone && c.telefone.replace(/\D/g, '').length >= 10;
                 return telOk && !statusEnviados[getUniqueKey(c.nome, c.dataTxt)] && isPendente(c);
             }).sort((a, b) => parseData(a.dataTxt) - parseData(b.dataTxt));
-
             if (pend.length === 0) return alert("Não há mais pendentes com telefone nos próximos 5 dias!");
-            
+           
             abrirWhats(pend[0].nome, pend[0].dataTxt, pend[0].telefone);
         }
 
         function setFiltro(filtro) {
             filtroAtual = filtro;
             paginaAtual = 1;
-            document.querySelectorAll('.filter-btn').forEach(btn => 
+            document.querySelectorAll('.filter-btn').forEach(btn =>
                 btn.classList.toggle('active', btn.id === `btn-${filtro}`)
             );
             exibirLista();
@@ -342,6 +349,44 @@
         function filtrar() {
             paginaAtual = 1;
             exibirLista();
+        }
+
+        // ====================== FUNÇÕES DE PAGINAÇÃO ======================
+        function paginaAnterior() {
+            if (paginaAtual > 1) {
+                paginaAtual--;
+                exibirLista();
+            }
+        }
+
+        function proximaPagina() {
+            const busca = document.getElementById('busca').value.toLowerCase().trim();
+
+            let filtered = dados.filter(c => {
+                if (busca && !c.nome.toLowerCase().includes(busca))
+                    return false;
+
+                const key = getUniqueKey(c.nome, c.dataTxt);
+                const isEnviado = !!statusEnviados[key] &&
+                    statusEnviados[key].mes === new Date().toISOString().slice(0,7);
+
+                const isVencido = parseData(c.dataTxt) < getHoje();
+
+                if (filtroAtual === 'pendentes')
+                    return !isEnviado && isPendente(c);
+                if (filtroAtual === 'enviados')
+                    return isEnviado;
+                if (filtroAtual === 'vencidos')
+                    return isVencido;
+                return true;
+            });
+
+            const totalPaginas = Math.ceil(filtered.length / ITENS_POR_PAGINA);
+
+            if (paginaAtual < totalPaginas) {
+                paginaAtual++;
+                exibirLista();
+            }
         }
 
         function exibirLista() {
@@ -370,12 +415,14 @@
             const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
             const paginaDados = filtered.slice(inicio, inicio + ITENS_POR_PAGINA);
 
+            // Atualiza contador de páginas
+            document.getElementById("contadorPaginas").textContent = paginaAtual + " / " + totalPaginas;
+
             paginaDados.forEach(c => {
                 const key = getUniqueKey(c.nome, c.dataTxt);
-                const statusInfo = statusEnviados[key] && statusEnviados[key].mes === new Date().toISOString().slice(0,7) 
-                    ? `🟢 Enviado em ${statusEnviados[key].data}` 
+                const statusInfo = statusEnviados[key] && statusEnviados[key].mes === new Date().toISOString().slice(0,7)
+                    ? `🟢 Enviado em ${statusEnviados[key].data}`
                     : '⚪ Pendente';
-
                 const telLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
                 const isVencido = parseData(c.dataTxt) < getHoje();
 
